@@ -41,7 +41,6 @@ export function mockCtx(overrides = {}) {
       return d
     },
     theme: { overrideTokens() {}, setTheme() {}, register() {} },
-    sessions: { create: async () => {}, binding: () => null },
     connection: { rpc: { call: async () => ({ ok: false, error: { code: 'no-handler', message: 'not registered' } }) } },
     on() {}, off() {},
     ...overrides,
