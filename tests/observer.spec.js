@@ -27,7 +27,7 @@ describe('Ambient Observer', () => {
     expect(seam.tripleCount()).toBe(1)
     vi.advanceTimersByTime(3000)      // t=5000
     main.textContent = '再次报错'
-    vi.advanceTimersByTime(1000)      // scan at 5500 → 5500-500 ≥ 3000 → fire #2
+    vi.advanceTimersByTime(1000)      // 第二次文本变更后第 6 个 500ms 拍触发 fire #2（距首次触发满 3s 窗口）
     expect(seam.tripleCount()).toBe(2)
     cleanup()
     vi.useRealTimers()
@@ -48,5 +48,18 @@ describe('Ambient Observer', () => {
     btn.click()
     expect(mainInput.value).toContain('排查')
     cleanup()
+  })
+
+  it('无 .chat-content 且无 main 时绝不回退扫描 body（防自触发）', () => {
+    vi.useFakeTimers()
+    const { dom, seam } = loadPet()
+    const cleanup = seam.apply(mockCtx())
+    const doc = dom.window.document
+    // 页面上没有 .chat-content / main 元素（宠物自身 root 在 body 上，含"报错"字样也不该触发）
+    expect(doc.querySelector('.chat-content')).toBeNull()
+    vi.advanceTimersByTime(4000)
+    expect(seam.tripleCount()).toBe(0)
+    cleanup()
+    vi.useRealTimers()
   })
 })
