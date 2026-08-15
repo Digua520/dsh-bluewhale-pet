@@ -26,4 +26,17 @@ describe('1级路由', () => {
     expect(seam.pools.chat.length).toBeGreaterThan(0)
     expect(seam.pools.advice.length).toBeGreaterThan(0)
   })
+
+  it('词表碰撞按优先级裁决', () => {
+    const { seam } = loadPet()
+    const r = seam.route
+    // '帮我' 是 task 词、'帮帮我/怎么办' 是 help 词——task 优先级更高
+    expect(r('帮帮我卡住了怎么办')).toEqual({ layer: 3, intent: 'task' })
+    // 同含 greet(hi) 与 chat(水)：greet 在前
+    expect(r('hi 想喝水')).toEqual({ layer: 1, intent: 'greet' })
+    // 同含 help(怎么办) 与 task(写)：task 在前
+    expect(r('怎么办写不出来了')).toEqual({ layer: 3, intent: 'task' })
+    // farewell 优先于 greet（'再见'已从 greet 移出）
+    expect(r('再见啦')).toEqual({ layer: 1, intent: 'farewell' })
+  })
 })
