@@ -48,7 +48,11 @@ describe('2级 fast-chat host 桥', () => {
     await loadHost(ctx)
     const res = await handler('fast-chat', { text: 'x' })
     expect(res.ok).toBe(false)
-    expect(res.error.code).toBe('llm-unavailable')
+    expect(res.error).toMatchObject({
+      code: 'model-unavailable',
+      message: expect.any(String),
+      details: { provider: 'deepseek-official', model: 'deepseek-chat' },
+    })
   })
 
   it('注入声明包含 connection', () => {
@@ -76,7 +80,7 @@ describe('2级 fast-chat host 桥', () => {
     })
   })
 
-  it('模型错误以 finish 块返回 → llm-error（不回空文本）', async () => {
+  it('模型错误以 finish 块返回 → internal（不回空文本）', async () => {
     let handler = null
     const stream = vi.fn(async function* () {
       yield { type: 'finish', reason: { kind: 'error', failure: { message: 'boom' } } }
@@ -89,7 +93,7 @@ describe('2级 fast-chat host 桥', () => {
     await loadHost(ctx)
     const res = await handler('fast-chat', { text: '你好' })
     expect(res.ok).toBe(false)
-    expect(res.error.code).toBe('llm-error')
+    expect(res.error).toMatchObject({ code: 'internal', details: {} })
     expect(stream).toHaveBeenCalledTimes(1)
   })
 
@@ -101,11 +105,11 @@ describe('2级 fast-chat host 桥', () => {
       llm: { stream: vi.fn() },
     }
     await loadHost(ctx)
-    expect((await handler('fast-chat', { text: '   ' })).error.code).toBe('bad-request')
-    expect((await handler('fast-chat', { text: 'x'.repeat(2001) })).error.code).toBe('bad-request')
+    expect((await handler('fast-chat', { text: '  ' })).error).toMatchObject({ code: 'bad-request', details: { issues: [] } })
+    expect((await handler('fast-chat', { text: 'x'.repeat(2001) })).error).toMatchObject({ code: 'bad-request', details: { issues: [] } })
   })
 
-  it('unknown-endpoint 返回错误码', async () => {
+  it('unknown-endpoint 返回错误码 → unknown-command', async () => {
     let handler = null
     const ctx = {
       effect(fn) { return fn() },
@@ -113,6 +117,21 @@ describe('2级 fast-chat host 桥', () => {
       llm: { stream: vi.fn() },
     }
     await loadHost(ctx)
-    expect((await handler('other', { text: 'x' })).error.code).toBe('unknown-endpoint')
+    expect((await handler('other', { text: 'x' })).error).toMatchObject({ code: 'unknown-command', details: {} })
+  })
+
+  it('finish aborted 块 → cancelled（线协议枚举码）', async () => {
+    let handler = null
+    const stream = vi.fn(async function* () {
+      yield { type: 'finish', reason: { kind: 'aborted' } }
+    })
+    const ctx = {
+      effect(fn) { return fn() },
+      connection: { rpc: { handle: (_c, h) => { handler = h } } },
+      llm: { stream },
+    }
+    await loadHost(ctx)
+    const res = await handler('fast-chat', { text: '你好' })
+    expect(res.error).toMatchObject({ code: 'cancelled', details: {} })
   })
 })
