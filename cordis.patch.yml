@@ -1,0 +1,4 @@
+# dsh-bluewhale-pet bundle patch — insert one loader entry for the plugin.
+- insert:
+    - id: bluewhale-pet
+      name: 'dsh-bluewhale-pet'
