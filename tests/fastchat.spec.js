@@ -40,6 +40,7 @@ describe('2级 fast-chat host 桥', () => {
     expect(opts.provider).toBe('deepseek-official')
     expect(opts.model).toBe('deepseek-chat')
     expect(opts.maxTokens).toBe(60)
+    expect(opts.reasoningEffort).toBe('off')
     expect(opts.system).toContain('蓝鲸')
     expect(opts.messages[0].content[0]).toEqual({ type: 'text', text: '你好' })
   })
