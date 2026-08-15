@@ -1,7 +1,7 @@
 /**
  * jsdom 装载器：在 jsdom 窗口里执行 lib/client.js（通过 __ModuleLoader__ 桩
  * 捕获工厂返回的 {inject, apply}），并暴露 pet 内部供单测断言（测试 seam：
- * client.js 检测 window.__DSH_WHALE_TEST__ 时挂载内部函数）。
+ * window.__DSH_WHALE_TEST__ 由 client.js 在 T3 起挂载内部函数；当前为空对象）。
  */
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -11,12 +11,12 @@ import { JSDOM } from 'jsdom'
 const CLIENT = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib', 'client.js')
 
 /** 捕获 client.js 的模块对象与 seam，并返回 jsdom 环境。 */
-export function loadPet(overrides = {}) {
+export function loadPet() {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', {
     url: 'http://localhost/',
-    // 必需：无 runScripts 时 jsdom 的 window.eval 在 Node 全局作用域求值，
-    // window/document 等全局不可见，client.js 会抛 "window is not defined"。
-    runScripts: 'dangerously',
+    // runScripts: 'outside-only' 使 window.eval 在 window 作用域执行，
+    // 同时保持页面内 <script> 禁用。
+    runScripts: 'outside-only',
   })
   const { window } = dom
   window.__ModuleLoader__ = {
@@ -34,10 +34,11 @@ export function loadPet(overrides = {}) {
 export function mockCtx(overrides = {}) {
   const ctx = {
     disposers: [],
+    // 同步执行（真实 cordis 为延迟执行），disposer 既入池也作为 effect 返回值。
     effect(fn, label) {
       const d = fn()
       if (typeof d === 'function') ctx.disposers.push(d)
-      return () => {}
+      return d
     },
     theme: { overrideTokens() {}, setTheme() {}, register() {} },
     sessions: { create: async () => {}, binding: () => null },
