@@ -62,4 +62,51 @@ describe('Ambient Observer', () => {
     cleanup()
     vi.useRealTimers()
   })
+
+  it('三连面板记录写入宠物对话', () => {
+    const { dom, seam } = loadPet()
+    const cleanup = seam.apply(mockCtx())
+    seam.tripleFire('help', '帮帮我')
+    const msgs = [...dom.window.document.querySelectorAll('#dsh-pet-chat .pc-msg')]
+    expect(msgs.some((m) => m.textContent.includes('【主屏信号】'))).toBe(true)
+    cleanup()
+  })
+
+  it('气泡点击排查后立即隐藏；8s 未点自动隐藏', () => {
+    vi.useFakeTimers()
+    const { dom, seam } = loadPet()
+    const doc = dom.window.document
+    const mainInput = doc.createElement('textarea')
+    doc.body.appendChild(mainInput)
+    const cleanup = seam.apply(mockCtx())
+    seam.tripleFire('error', '报错')
+    const bubble = doc.getElementById('dsh-pet-bubble')
+    expect(bubble.style.display).toBe('block')
+    doc.querySelector('#dsh-pet-root .pc-fix-btn').click()
+    expect(bubble.style.display).toBe('none')
+    seam.tripleFire('error', '又报错')
+    expect(bubble.style.display).toBe('block')
+    vi.advanceTimersByTime(8000)
+    expect(bubble.style.display).toBe('none')
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('尾部文案稳定时越过多个防抖窗口也不重复触发', () => {
+    vi.useFakeTimers()
+    const { dom, seam } = loadPet()
+    const doc = dom.window.document
+    const main = doc.createElement('div')
+    main.className = 'chat-content'
+    doc.body.appendChild(main)
+    const cleanup = seam.apply(mockCtx())
+    seam.observerStart()
+    main.textContent = '报错了'
+    vi.advanceTimersByTime(1000)
+    expect(seam.tripleCount()).toBe(1)
+    vi.advanceTimersByTime(10000)
+    expect(seam.tripleCount()).toBe(1)
+    cleanup()
+    vi.useRealTimers()
+  })
 })
