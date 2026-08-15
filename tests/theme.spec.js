@@ -23,4 +23,15 @@ describe('sunny-pixel 色板', () => {
       expect(captured.tokens[k].dark.length).toBeGreaterThan(0)
     }
   })
+
+  it('暗色宠物面板有根级前景色（防 all:initial 黑字黑底）', () => {
+    const { dom, seam } = loadPet()
+    const cleanup = seam.apply(mockCtx())
+    const style = dom.window.document.querySelector('style[data-plugin-css="dsh-bluewhale-pet"]')
+    const css = style.textContent
+    expect(css).toContain('color: #2a4450;')
+    expect(css).toContain('body[data-ds-dark-theme] #dsh-pet-root { color: #c8dce8')
+    expect(css).toContain('body[data-ds-dark-theme] #dsh-pet-root .pc-msg.pet { background: #273748; }')
+    cleanup()
+  })
 })
