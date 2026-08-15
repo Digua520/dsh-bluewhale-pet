@@ -185,6 +185,36 @@ describe('2级 fast-chat host 桥', () => {
     expect(res.error.message).toContain('web')
   })
 
+  it('lookup 端点：搜索空结果 → internal', async () => {
+    let handler = null
+    const ctx = {
+      effect(fn) { return fn() },
+      connection: { rpc: { handle: (_c, h) => { handler = h } } },
+      llm: { stream: vi.fn() },
+      web: { search: vi.fn(async () => ({ sources: [], truncated: false })) },
+    }
+    await loadHost(ctx)
+    const res = await handler('lookup', { text: '深圳天气' })
+    expect(res.ok).toBe(false)
+    expect(res.error).toMatchObject({ code: 'internal' })
+    expect(res.error.message).toContain('no results')
+  })
+
+  it('lookup 端点：web.search 抛错 → internal', async () => {
+    let handler = null
+    const ctx = {
+      effect(fn) { return fn() },
+      connection: { rpc: { handle: (_c, h) => { handler = h } } },
+      llm: { stream: vi.fn() },
+      web: { search: vi.fn(async () => { throw new Error('network down') }) },
+    }
+    await loadHost(ctx)
+    const res = await handler('lookup', { text: '深圳天气' })
+    expect(res.ok).toBe(false)
+    expect(res.error).toMatchObject({ code: 'internal' })
+    expect(res.error.message).toContain('web search failed')
+  })
+
   it('host 插件注入声明包含 web', async () => {
     const mod = await import('../lib/index.js')
     expect(mod.inject).toContain('web')

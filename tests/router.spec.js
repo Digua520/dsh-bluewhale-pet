@@ -77,4 +77,12 @@ describe('1级路由', () => {
     expect(r('替我写个脚本')).toEqual({ layer: 3, intent: 'task' })
     expect(r('写个函数')).toEqual({ layer: 3, intent: 'task' })
   })
+
+  it('lookup 单词级词不劫持任务动词与求助', () => {
+    const { seam } = loadPet()
+    const r = seam.route
+    expect(r('写一个新闻爬虫')).toEqual({ layer: 3, intent: 'task' })
+    expect(r('搜索功能报错了')).toEqual({ layer: 1, intent: 'help' })
+    expect(r('汇率')).toEqual({ layer: 2, intent: 'lookup' })
+  })
 })
