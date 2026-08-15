@@ -49,4 +49,17 @@ describe('3级委派任务', () => {
     cleanup()
     vi.useRealTimers()
   })
+
+  it('任务名含 HTML 时以纯文本渲染（防注入）', () => {
+    const { dom, seam } = loadPet()
+    const cleanup = seam.apply(mockCtx())
+    const doc = dom.window.document
+    const input = doc.getElementById('dsh-pet-input')
+    input.value = '帮我<img src=x onerror=alert(1)>'
+    doc.getElementById('dsh-pet-send').click()
+    const taskName = doc.querySelector('#dsh-pet-tasks .task .tname span')
+    expect(taskName.textContent).toBe('帮我<img src=x onerror=ale')
+    expect(doc.querySelector('#dsh-pet-tasks .task img')).toBeNull()
+    cleanup()
+  })
 })
