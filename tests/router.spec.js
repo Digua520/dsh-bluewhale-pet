@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { loadPet } from './helpers.js'
+import { loadPet, mockCtx } from './helpers.js'
 
 describe('1级路由', () => {
   it('route() 按优先级分类', () => {
@@ -39,5 +39,26 @@ describe('1级路由', () => {
     expect(r('怎么办写不出来了')).toEqual({ layer: 3, intent: 'task' })
     // farewell 优先于 greet（'再见'已从 greet 移出）
     expect(r('再见啦')).toEqual({ layer: 1, intent: 'farewell' })
+  })
+
+  it('IME 组合期间按 Enter 不发送消息', () => {
+    const { dom, seam } = loadPet()
+    const cleanup = seam.apply(mockCtx())
+    const doc = dom.window.document
+    const input = doc.getElementById('dsh-pet-input')
+    input.value = 'nihao'
+    const ev = new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+    // jsdom 构造器若不支持 isComposing 参数，用 defineProperty 注入：
+    Object.defineProperty(ev, 'isComposing', { value: true })
+    input.dispatchEvent(ev)
+    expect(doc.querySelectorAll('#dsh-pet-chat .pc-msg').length).toBe(0)
+    cleanup()
+  })
+
+  it('route 对含空格输入做空白归一化', () => {
+    const { seam } = loadPet()
+    expect(seam.route('你 好')).toEqual({ layer: 1, intent: 'greet' })
+    expect(seam.route('你好')).toEqual({ layer: 1, intent: 'greet' })
+    expect(seam.route('没 反应')).toEqual({ layer: 1, intent: 'help' })
   })
 })
