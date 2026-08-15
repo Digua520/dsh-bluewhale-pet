@@ -16,6 +16,15 @@ describe('3级委派任务', () => {
     cleanup()
   })
 
+  it('初始无任务态：总进度显示无任务、tip 提示待命', () => {
+    const { dom, seam } = loadPet()
+    const cleanup = seam.apply(mockCtx())
+    const doc = dom.window.document
+    expect(doc.getElementById('dsh-pet-overall').textContent).toBe('无任务')
+    expect(doc.getElementById('dsh-pet-overall-tip').textContent).toContain('布置')
+    cleanup()
+  })
+
   it('假管线推进到 100% → 完成态 + 播报 + 进度条闪烁', async () => {
     vi.useFakeTimers()
     const { dom, seam } = loadPet()
@@ -34,16 +43,38 @@ describe('3级委派任务', () => {
     vi.useRealTimers()
   })
 
-  it('完成播报 confetti 粒子数封顶且自动清理', async () => {
+  it('任务完成后 tip 显示完成态文案', () => {
     vi.useFakeTimers()
     const { dom, seam } = loadPet()
     const cleanup = seam.apply(mockCtx())
     const doc = dom.window.document
+    doc.getElementById('dsh-pet-input').value = '帮我写个脚本'
+    doc.getElementById('dsh-pet-send').click()
+    vi.advanceTimersByTime(4200 * 12)
+    expect(doc.getElementById('dsh-pet-overall-tip').textContent).toContain('完成')
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('完成播报 confetti 粒子数硬封顶 60 且自动清理', async () => {
+    vi.useFakeTimers()
+    const { dom, seam } = loadPet()
+    const cleanup = seam.apply(mockCtx())
+    const doc = dom.window.document
+    // 先铺 48 颗存量粒子（模拟并发完成场景）
+    const rootEl = doc.getElementById('dsh-pet-root')
+    for (let i = 0; i < 48; i++) {
+      const c = doc.createElement('i')
+      c.className = 'confetti'
+      rootEl.appendChild(c)
+    }
     doc.getElementById('dsh-pet-input').value = '帮我查个资料'
     doc.getElementById('dsh-pet-send').click()
     vi.advanceTimersByTime(4200 * 12 + 100)
     const confetti = doc.querySelectorAll('#dsh-pet-root .confetti')
     expect(confetti.length).toBeLessThanOrEqual(60)
+    // 移除手铺存量粒子，仅保留任务生成的粒子（5s 后应自动清零）
+    rootEl.querySelectorAll('.confetti').forEach((n, i) => { if (i < 48) n.remove() })
     vi.advanceTimersByTime(5000)
     expect(doc.querySelectorAll('#dsh-pet-root .confetti').length).toBe(0)
     cleanup()
