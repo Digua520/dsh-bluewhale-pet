@@ -9,6 +9,12 @@ async function loadHost(ctx) {
 }
 
 describe('2级 fast-chat host 桥', () => {
+  it('host 插件注入声明包含 connection 与 llm（cordis 代理对未注入服务会抛错）', async () => {
+    const mod = await import('../lib/index.js')
+    expect(mod.inject).toContain('connection')
+    expect(mod.inject).toContain('llm')
+  })
+
   it('host 注册 /bluewhale-pet 通道，fast-chat 调 ctx.llm.stream 并返回文本', async () => {
     let registered = null
     const chunks = [
