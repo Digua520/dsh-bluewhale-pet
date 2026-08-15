@@ -5,7 +5,7 @@ describe('dsh-bluewhale-pet 冒烟', () => {
   it('apply() 挂载宠物 DOM，disposer 清理后无残留', () => {
     const { dom, module } = loadPet()
     const ctx = mockCtx()
-    expect(module.inject).toEqual(['theme', 'sessions'])
+    expect(module.inject).toEqual(['theme', 'connection'])
     module.apply(ctx)
     expect(dom.window.document.getElementById('dsh-pet-root')).not.toBeNull()
     expect(dom.window.document.getElementById('dsh-pet-root').children.length).toBeGreaterThan(0)
