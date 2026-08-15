@@ -1,6 +1,6 @@
 {
   "name": "dsh-bluewhale-pet",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "DeepSeek 像素蓝鲸陪伴宠物 + 柔和自然主题（晴空像素风）：QQ 宠物式养成、迷你 agent 工作台、隐藏大佬建议。",
   "type": "module",
   "main": "lib/index.js",

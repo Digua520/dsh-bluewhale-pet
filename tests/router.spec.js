@@ -30,8 +30,9 @@ describe('1级路由', () => {
   it('词表碰撞按优先级裁决', () => {
     const { seam } = loadPet()
     const r = seam.route
-    // '帮我' 是 task 词、'帮帮我/怎么办' 是 help 词——task 优先级更高
-    expect(r('帮帮我卡住了怎么办')).toEqual({ layer: 3, intent: 'task' })
+    // '帮帮我' 显式走 help（先于 task 判定）；'帮我' 走 task
+    expect(r('帮帮我卡住了怎么办')).toEqual({ layer: 1, intent: 'help' })
+    expect(r('帮我写个脚本')).toEqual({ layer: 3, intent: 'task' })
     // 同含 greet(hi) 与 chat(水)：greet 在前
     expect(r('hi 想喝水')).toEqual({ layer: 1, intent: 'greet' })
     // 同含 help(怎么办) 与 task(写)：task 在前
