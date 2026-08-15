@@ -13,5 +13,6 @@ describe('dsh-bluewhale-pet 冒烟', () => {
     ctx.disposers.forEach((d) => d())
     expect(dom.window.document.getElementById('dsh-pet-root')).toBeNull()
     expect(dom.window.document.querySelector('style[data-plugin-css="dsh-bluewhale-pet"]')).toBeNull()
+    expect(dom.window.document.getElementById('dsh-pet-tail')).toBeNull()
   })
 })

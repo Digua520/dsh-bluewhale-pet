@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { loadPet } from './helpers.js'
+import { describe, it, expect } from 'vitest'
+import { loadPet, mockCtx } from './helpers.js'
 
 describe('养成数值', () => {
   it('seam 暴露 stats 纯逻辑（阈值/衰减/亲密度）', () => {
@@ -27,10 +27,33 @@ describe('养成数值', () => {
     expect(seam.statsLogic.addXp({ xp: 100, dailyXp: 200, date: '2026-08-15' }, 10, '2026-08-16'))
       .toMatchObject({ xp: 110, dailyXp: 10 })
 
+    // decay 下限 10 钳制
+    expect(seam.statsLogic.decay({ food: 10, mood: 10, clean: 10 })).toEqual({ food: 10, mood: 10, clean: 10 })
+    // 当日额度用尽 → 0 增长
+    expect(seam.statsLogic.addXp({ xp: 0, dailyXp: 200, date: '2026-08-15' }, 10, '2026-08-15'))
+      .toMatchObject({ xp: 0, dailyXp: 200 })
+    // xp 上限 1000 钳制
+    expect(seam.statsLogic.addXp({ xp: 999, dailyXp: 0, date: '2026-08-15' }, 10, '2026-08-15'))
+      .toMatchObject({ xp: 1000 })
+
     // 形态：0-200 / 201-600 / 601+
     expect(seam.statsLogic.levelOf(0).name).toBe('幼鲸')
     expect(seam.statsLogic.levelOf(200).name).toBe('幼鲸')
     expect(seam.statsLogic.levelOf(201).name).toBe('少年鲸')
     expect(seam.statsLogic.levelOf(601).name).toBe('成年鲸')
+  })
+
+  it('renderXp 按亲密度切换体型档位与称号', () => {
+    const { dom, seam } = loadPet()
+    seam.apply(mockCtx())
+    const doc = dom.window.document
+    const whale = doc.getElementById('dsh-pet-body')
+    expect(whale.classList.contains('lv0')).toBe(true)
+    seam.setXp(250)
+    expect(whale.classList.contains('lv1')).toBe(true)
+    expect(doc.querySelector('.pc-head .nm').textContent).toContain('海风')
+    seam.setXp(700)
+    expect(whale.classList.contains('lv2')).toBe(true)
+    expect(doc.querySelector('.pc-head .nm').textContent).toContain('深海')
   })
 })
