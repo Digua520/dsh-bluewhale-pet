@@ -65,7 +65,12 @@ describe('1级路由', () => {
   it('帮我/替我 不再单独触发任务——日常求助走 2级', () => {
     const { seam } = loadPet()
     const r = seam.route
-    expect(r('深圳天气帮我看看')).toEqual({ layer: 2, intent: 'fast' })
+    expect(r('深圳天气帮我看看')).toEqual({ layer: 2, intent: 'lookup' })
+    expect(r('查一下深圳天气')).toEqual({ layer: 2, intent: 'lookup' })
+    expect(r('今天会下雨吗')).toEqual({ layer: 2, intent: 'lookup' })
+    expect(r('帮我搜一下 vite 配置')).toEqual({ layer: 2, intent: 'lookup' })
+    // 陈述句不触发查询（保持闲聊）
+    expect(r('今天天气不错')).toEqual({ layer: 2, intent: 'fast' })
     expect(r('帮我看看这个')).toEqual({ layer: 2, intent: 'fast' })
     // 动词仍然承载任务意图
     expect(r('帮我查一下这个 bug')).toEqual({ layer: 3, intent: 'task' })

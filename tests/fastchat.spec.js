@@ -141,4 +141,71 @@ describe('2级 fast-chat host 桥', () => {
     const res = await handler('fast-chat', { text: '你好' })
     expect(res.error).toMatchObject({ code: 'cancelled', details: {} })
   })
+
+  it('lookup 端点：web.search → LLM 合成 → 返回文本', async () => {
+    let handler = null
+    const search = vi.fn(async () => ({
+      sources: [{ url: 'https://x.test/1', title: '深圳天气', snippet: '多云 28 度' }],
+      truncated: false,
+    }))
+    const chunks = [
+      { type: 'text-delta', index: 0, text: '深圳今天多云' },
+      { type: 'finish', reason: { kind: 'stop' } },
+    ]
+    const stream = vi.fn(async function* () { yield* chunks })
+    const ctx = {
+      effect(fn) { return fn() },
+      connection: { rpc: { handle: (_c, h) => { handler = h } } },
+      llm: { stream },
+      web: { search },
+    }
+    await loadHost(ctx)
+    const res = await handler('lookup', { text: '深圳天气帮我看看' }, new AbortController().signal)
+    expect(res.ok).toBe(true)
+    expect(res.value.text).toBe('深圳今天多云')
+    expect(search).toHaveBeenCalledWith({ query: '深圳天气帮我看看', maxResults: 5 }, expect.anything())
+    const llmOpts = stream.mock.calls[0][0]
+    expect(llmOpts.maxTokens).toBe(150)
+    expect(llmOpts.reasoningEffort).toBe('off')
+    expect(llmOpts.messages[0].content[0].text).toContain('多云 28 度')
+  })
+
+  it('lookup 端点：web 不可用 → internal 错误', async () => {
+    let handler = null
+    const ctx = {
+      effect(fn) { return fn() },
+      connection: { rpc: { handle: (_c, h) => { handler = h } } },
+      llm: { stream: vi.fn() },
+      web: undefined,
+    }
+    await loadHost(ctx)
+    const res = await handler('lookup', { text: '深圳天气' })
+    expect(res.ok).toBe(false)
+    expect(res.error.code).toBe('internal')
+    expect(res.error.message).toContain('web')
+  })
+
+  it('host 插件注入声明包含 web', async () => {
+    const mod = await import('../lib/index.js')
+    expect(mod.inject).toContain('web')
+  })
+
+  it('lookup 意图走 /bluewhale-pet lookup 端点', async () => {
+    const { dom, seam } = loadPet()
+    const ctx = mockCtx({
+      connection: { rpc: { call: async (channel, endpoint) => {
+        expect(channel).toBe('/bluewhale-pet')
+        expect(endpoint).toBe('lookup')
+        return { ok: true, value: { text: '深圳今天多云，记得带伞哦～(๑•̀ㅂ•́)و✧' } }
+      } } },
+    })
+    seam.apply(ctx)
+    const doc = dom.window.document
+    doc.getElementById('dsh-pet-input').value = '深圳天气帮我看看'
+    doc.getElementById('dsh-pet-send').click()
+    await vi.waitFor(() => {
+      const msgs = [...doc.querySelectorAll('#dsh-pet-chat .pc-msg')]
+      expect(msgs.some((m) => m.textContent.includes('多云'))).toBe(true)
+    })
+  })
 })
