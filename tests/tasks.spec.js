@@ -86,10 +86,11 @@ describe('3级委派任务', () => {
     const cleanup = seam.apply(mockCtx())
     const doc = dom.window.document
     const input = doc.getElementById('dsh-pet-input')
-    input.value = '帮我<img src=x onerror=alert(1)>'
+    const payload = '帮我写<img src=x onerror=alert(1)>'
+    input.value = payload
     doc.getElementById('dsh-pet-send').click()
     const taskName = doc.querySelector('#dsh-pet-tasks .task .tname span')
-    expect(taskName.textContent).toBe('帮我<img src=x onerror=ale')
+    expect(taskName.textContent).toBe(payload.slice(0, 24))
     expect(doc.querySelector('#dsh-pet-tasks .task img')).toBeNull()
     cleanup()
   })
