@@ -14,7 +14,7 @@ describe('2级 fast-chat host 桥', () => {
     const chunks = [
       { type: 'text-delta', index: 0, text: '主人' },
       { type: 'text-delta', index: 0, text: '好呀～' },
-      { type: 'finish', reason: 'stop' },
+      { type: 'finish', reason: { kind: 'stop' } },
     ]
     const stream = vi.fn(async function* () { yield* chunks })
     const ctx = {
@@ -74,5 +74,45 @@ describe('2级 fast-chat host 桥', () => {
       const msgs = [...doc.querySelectorAll('#dsh-pet-chat .pc-msg')]
       expect(msgs.some((m) => m.textContent.includes('主人好呀～'))).toBe(true)
     })
+  })
+
+  it('模型错误以 finish 块返回 → llm-error（不回空文本）', async () => {
+    let handler = null
+    const stream = vi.fn(async function* () {
+      yield { type: 'finish', reason: { kind: 'error', failure: { message: 'boom' } } }
+    })
+    const ctx = {
+      effect(fn) { return fn() },
+      connection: { rpc: { handle: (_c, h) => { handler = h } } },
+      llm: { stream },
+    }
+    await loadHost(ctx)
+    const res = await handler('fast-chat', { text: '你好' })
+    expect(res.ok).toBe(false)
+    expect(res.error.code).toBe('llm-error')
+    expect(stream).toHaveBeenCalledTimes(1)
+  })
+
+  it('bad-request：空白与超长文本', async () => {
+    let handler = null
+    const ctx = {
+      effect(fn) { return fn() },
+      connection: { rpc: { handle: (_c, h) => { handler = h } } },
+      llm: { stream: vi.fn() },
+    }
+    await loadHost(ctx)
+    expect((await handler('fast-chat', { text: '   ' })).error.code).toBe('bad-request')
+    expect((await handler('fast-chat', { text: 'x'.repeat(2001) })).error.code).toBe('bad-request')
+  })
+
+  it('unknown-endpoint 返回错误码', async () => {
+    let handler = null
+    const ctx = {
+      effect(fn) { return fn() },
+      connection: { rpc: { handle: (_c, h) => { handler = h } } },
+      llm: { stream: vi.fn() },
+    }
+    await loadHost(ctx)
+    expect((await handler('other', { text: 'x' })).error.code).toBe('unknown-endpoint')
   })
 })
